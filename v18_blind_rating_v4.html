@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d1117">
+<title>V18.1 Blind Chart Rating</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+    overscroll-behavior-y: contain;
+  }
+  body { padding: 16px; padding-bottom: 280px; }
+  @supports (padding: env(safe-area-inset-bottom)) {
+    body { padding-bottom: calc(280px + env(safe-area-inset-bottom)); }
+  }
+  
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #30363d;
+    margin-bottom: 16px;
+  }
+  .header h1 { font-size: 18px; font-weight: 600; }
+  .header .progress {
+    color: #8b949e;
+    font-size: 13px;
+  }
+  .progress-bar {
+    width: 240px;
+    height: 6px;
+    background: #21262d;
+    border-radius: 3px;
+    margin-left: 12px;
+    display: inline-block;
+    vertical-align: middle;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: #2f81f7;
+    transition: width 0.2s;
+  }
+  
+  .info-bar {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    color: #8b949e;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  
+  .ha-toggle {
+    background: #21262d;
+    border: 1px solid #30363d;
+    color: #e6edf3;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .ha-toggle.active {
+    background: #1f6feb;
+    border-color: #58a6ff;
+    color: #ffffff;
+  }
+  
+  .charts-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .chart-panel {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 8px;
+  }
+  .chart-title {
+    font-size: 11px;
+    color: #8b949e;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+  }
+  .chart-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 4px;
+  }
+  
+  /* Mobile-specific */
+  @media (max-width: 768px) {
+    body { padding: 8px; padding-bottom: 240px; }
+    .header h1 { font-size: 14px; }
+    .progress-bar { width: 80px; }
+    .info-bar { font-size: 11px; padding: 8px 10px; }
+  }
+  
+  .controls {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 14px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-radius: 0;
+    border-top: 1px solid #30363d;
+    border-left: 0;
+    border-right: 0;
+    border-bottom: 0;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    z-index: 100;
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.5);
+  }
+  .controls-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .controls-row:last-child { margin-bottom: 0; }
+  
+  .decision-buttons { display: flex; gap: 6px; flex: 1; }
+  .btn {
+    background: #21262d;
+    border: 1px solid #30363d;
+    color: #e6edf3;
+    padding: 10px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.1s;
+  }
+  .btn:hover, .btn:active { background: #30363d; }
+  .btn.execute.active {
+    background: #1f6feb;
+    border-color: #2f81f7;
+    color: #ffffff;
+  }
+  .btn.skip.active {
+    background: #da3633;
+    border-color: #f85149;
+    color: #ffffff;
+  }
+  .btn.primary {
+    background: #238636;
+    border-color: #2ea043;
+    color: #ffffff;
+  }
+  .btn.primary:disabled {
+    background: #30363d;
+    border-color: #30363d;
+    color: #6e7681;
+    cursor: not-allowed;
+  }
+  .btn.secondary {
+    background: transparent;
+    color: #8b949e;
+  }
+  .btn.execute, .btn.skip { flex: 1; }
+  
+  .conf-buttons { display: flex; gap: 4px; flex: 1; }
+  .conf-btn {
+    flex: 1;
+    height: 40px;
+    background: #21262d;
+    border: 1px solid #30363d;
+    color: #e6edf3;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .conf-btn.active {
+    background: #2f81f7;
+    border-color: #58a6ff;
+    color: #ffffff;
+  }
+  
+  .label {
+    font-size: 11px;
+    color: #8b949e;
+    flex-basis: 100%;
+    margin-bottom: -4px;
+  }
+  
+  textarea {
+    flex: 1;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    color: #e6edf3;
+    border-radius: 6px;
+    padding: 8px;
+    font-family: inherit;
+    font-size: 16px;
+    resize: none;
+    height: 36px;
+  }
+  textarea:focus {
+    outline: none;
+    border-color: #2f81f7;
+    height: 80px;
+  }
+  
+  .nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 4px;
+    gap: 8px;
+  }
+  .nav .autosave {
+    color: #8b949e;
+    font-size: 11px;
+    flex: 1;
+    text-align: center;
+  }
+  
+  /* Initial / final screens */
+  .screen {
+    max-width: 720px;
+    margin: 16px auto;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 24px;
+  }
+  .screen h1 {
+    font-size: 22px;
+    margin-bottom: 16px;
+  }
+  .screen p {
+    margin-bottom: 12px;
+    line-height: 1.6;
+    font-size: 14px;
+  }
+  .screen .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin: 20px 0;
+  }
+  .stat-card {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 14px;
+  }
+  .stat-card .stat-label {
+    font-size: 10px;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+  }
+  .stat-card .stat-value {
+    font-size: 22px;
+    font-weight: 600;
+  }
+  .stat-card .stat-value.positive { color: #3fb950; }
+  .stat-card .stat-value.negative { color: #f85149; }
+  
+  .actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+  
+  .hidden { display: none !important; }
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+    font-size: 13px;
+  }
+  table th, table td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid #30363d;
+  }
+  table th {
+    font-size: 11px;
+    color: #8b949e;
+    text-transform: uppercase;
+  }
+  
+  input[type="text"], select {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    color: #e6edf3;
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-size: 16px;
+    font-family: inherit;
+  }
+  
+  /* Image loading state */
+  .chart-img.loading {
+    background: linear-gradient(90deg, #161b22 25%, #21262d 50%, #161b22 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    min-height: 200px;
+  }
+  @keyframes shimmer {
+    0% { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+  }
+</style>
+</head>
+<body>
+
+<div id="welcome" class="screen">
+  <h1>V18.1 Blind Chart Rating</h1>
+  <p>Rate <strong>100 anonymized v18.1 setups</strong>. Each shows two charts (daily + weekly) with a toggle between regular candles and Heikin Ashi. Decide Execute or Skip, set confidence, optional notes.</p>
+  <p style="color: #8b949e; font-size: 13px;">Charts end on the entry day (vertical dashed line). Y-axis prices and ticker info are masked. Outcome stays hidden until all 100 are rated.</p>
+  <p style="color: #f78166; font-size: 13px; background: #21262d; padding: 10px; border-radius: 6px; border-left: 3px solid #f78166;">⚠️ <strong>Save backups frequently.</strong> Browser storage can be lost if you clear cache or iOS evicts it. Use the 💾 Save Backup button often — every 10-20 setups. The app auto-prompts you to backup every 10 ratings.</p>
+  
+  <h2 style="margin-top: 20px; font-size: 16px;">Pre-commit hypothesis</h2>
+  <p style="font-size: 13px; color: #8b949e;">Saved with your ratings — review at the end.</p>
+  <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 8px;">
+    <div>
+      <label class="label" style="display: block; margin-bottom: 4px;">Expected % to mark Skip:</label>
+      <input id="hyp-skip-pct" type="text" placeholder="e.g. 30%" style="width: 120px;">
+    </div>
+    <div>
+      <label class="label" style="display: block; margin-bottom: 4px;">Expected skip-set WR vs baseline:</label>
+      <select id="hyp-skip-direction">
+        <option value="">—</option>
+        <option value="lower">LOWER WR (correctly avoiding losers)</option>
+        <option value="higher">HIGHER WR (skipping winners by mistake)</option>
+        <option value="same">SAME (no edge)</option>
+      </select>
+    </div>
+    <div>
+      <label class="label" style="display: block; margin-bottom: 4px;">Patterns you'll skip on:</label>
+      <textarea id="hyp-patterns" rows="3" style="font-size: 14px; height: auto; min-height: 60px;" placeholder="e.g. overextended above EMA8, MACD diverging, choppy weekly"></textarea>
+    </div>
+    <div>
+      <label class="label" style="display: block; margin-bottom: 4px;">Other commitments:</label>
+      <textarea id="hyp-other" rows="2" style="font-size: 14px; height: auto; min-height: 50px;" placeholder="optional"></textarea>
+    </div>
+  </div>
+  
+  <div class="actions">
+    <button class="btn primary" onclick="startRating()">Start Rating</button>
+    <button class="btn secondary" onclick="resumeRating()">Resume saved progress</button>
+    <button class="btn secondary" onclick="document.getElementById('import-file').click()">📂 Import backup JSON</button>
+    <button class="btn secondary" onclick="if (confirm('Wipe saved ratings & hypothesis?')) { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(STORAGE_KEY + '_backup'); location.reload(); }">Reset all</button>
+    <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importBackup(event)">
+  </div>
+</div>
+
+<div id="rater" class="hidden">
+  <div class="header">
+    <h1>Setup <span id="setup-num">1</span>/100</h1>
+    <div class="progress">
+      <span class="progress-bar"><span class="progress-bar-fill" id="progress-fill"></span></span>
+    </div>
+  </div>
+  
+  <div class="info-bar">
+    <span>ID: <strong id="setup-id-display">—</strong></span>
+    <button class="ha-toggle" id="ha-toggle" onclick="toggleHA()">Heikin Ashi: OFF</button>
+  </div>
+  
+  <div class="charts-stack">
+    <div class="chart-panel">
+      <div class="chart-title">Daily — 130 bars</div>
+      <img class="chart-img" id="img-daily" alt="Daily chart">
+    </div>
+    <div class="chart-panel">
+      <div class="chart-title">Weekly — 104 bars</div>
+      <img class="chart-img" id="img-weekly" alt="Weekly chart">
+    </div>
+  </div>
+  
+  <div class="controls">
+    <div class="controls-row">
+      <span class="label">Decision:</span>
+      <div class="decision-buttons">
+        <button class="btn execute" id="btn-execute" onclick="setDecision('execute')">EXECUTE</button>
+        <button class="btn skip" id="btn-skip" onclick="setDecision('skip')">SKIP</button>
+      </div>
+    </div>
+    <div class="controls-row">
+      <span class="label">Confidence (1=low, 5=high):</span>
+      <div class="conf-buttons">
+        <button class="conf-btn" onclick="setConfidence(1)">1</button>
+        <button class="conf-btn" onclick="setConfidence(2)">2</button>
+        <button class="conf-btn" onclick="setConfidence(3)">3</button>
+        <button class="conf-btn" onclick="setConfidence(4)">4</button>
+        <button class="conf-btn" onclick="setConfidence(5)">5</button>
+      </div>
+    </div>
+    <div class="controls-row">
+      <textarea id="notes-input" placeholder="Optional notes — what triggered this decision?"></textarea>
+    </div>
+    <div class="nav">
+      <button class="btn secondary" id="btn-prev" onclick="prevSetup()">← Back</button>
+      <span class="autosave" id="autosave-status">auto-saved</span>
+      <button class="btn primary" id="btn-next" onclick="nextSetup()" disabled>Next →</button>
+    </div>
+    <div class="nav" style="margin-top: 8px; gap: 6px;">
+      <button class="btn secondary" onclick="downloadBackup()" style="flex: 1; font-size: 12px; padding: 8px;">💾 Save Backup</button>
+      <button class="btn secondary" onclick="showProgressCheck()" style="flex: 1; font-size: 12px; padding: 8px;">📊 View Progress</button>
+    </div>
+  </div>
+</div>
+
+<div id="progress-check" class="screen hidden">
+  <h1>Mid-Session Progress Check</h1>
+  <p style="color: #f78166; font-size: 13px;">⚠️ Viewing intermediate results may affect how you rate the remaining setups. The cleanest test is to defer this until the end. Continue only if you want to self-correct.</p>
+  
+  <div id="progress-stats"></div>
+  
+  <div class="actions" style="margin-top: 20px;">
+    <button class="btn primary" onclick="document.getElementById('progress-check').classList.add('hidden'); document.getElementById('rater').classList.remove('hidden');">Back to rating</button>
+    <button class="btn secondary" onclick="downloadBackup()">💾 Download backup</button>
+  </div>
+</div>
+
+<div id="completion" class="screen hidden">
+  <h1>All 100 setups rated 🎉</h1>
+  <p>Click reveal to see how you did. Once revealed, you can no longer change ratings without resetting.</p>
+  <div class="actions">
+    <button class="btn primary" onclick="revealResults()">Reveal Results</button>
+    <button class="btn secondary" onclick="downloadRatings()">Export ratings JSON</button>
+    <button class="btn secondary" onclick="state.currentIdx = 99; renderSetup(); document.getElementById('completion').classList.add('hidden'); document.getElementById('rater').classList.remove('hidden');">Review last setup</button>
+  </div>
+</div>
+
+<div id="results" class="screen hidden">
+  <h1>Your Results</h1>
+  <p id="headline-summary"></p>
+  
+  <div class="stat-grid" id="stat-grid"></div>
+  
+  <h2 style="font-size: 16px; margin-top: 20px;">Confidence calibration</h2>
+  <div id="confidence-table"></div>
+  
+  <h2 style="font-size: 16px; margin-top: 20px;">Per-quartile execute rate</h2>
+  <p style="font-size: 12px; color: #8b949e;">Ideally: high execute on top quartile, low execute on bottom quartile.</p>
+  <div id="quartile-table"></div>
+  
+  <h2 style="font-size: 16px; margin-top: 20px;">Hypothesis vs reality</h2>
+  <div id="hypothesis-comparison"></div>
+  
+  <div class="actions">
+    <button class="btn primary" onclick="downloadRatings()">Download full ratings JSON</button>
+    <button class="btn secondary" onclick="if (confirm('Reset everything?')) { localStorage.removeItem(STORAGE_KEY); location.reload(); }">Reset</button>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'v18_blind_rating_v4';
+
+// Outcomes embedded directly (small enough)
+const OUTCOMES = {"setup_001":{"return_pct":-0.3464453119944812,"pnl_dollars":-31305.42986647968,"is_winner":false},"setup_002":{"return_pct":-0.3921552151257093,"pnl_dollars":-365629.8493806806,"is_winner":false},"setup_003":{"return_pct":-0.4717536928700052,"pnl_dollars":-180470.7138613892,"is_winner":false},"setup_004":{"return_pct":-0.30270617238943,"pnl_dollars":-149877.7555853061,"is_winner":false},"setup_005":{"return_pct":-0.4717244745730694,"pnl_dollars":-53382.75433856095,"is_winner":false},"setup_006":{"return_pct":-0.3223435684156687,"pnl_dollars":-25750.8632394147,"is_winner":false},"setup_007":{"return_pct":-0.3727518927995548,"pnl_dollars":-52263.89154197679,"is_winner":false},"setup_008":{"return_pct":-0.3347298708428645,"pnl_dollars":-215222.9893914463,"is_winner":false},"setup_009":{"return_pct":-0.3281954062701368,"pnl_dollars":-277576.4792719253,"is_winner":false},"setup_010":{"return_pct":-0.4804129706103204,"pnl_dollars":-95619.93583741006,"is_winner":false},"setup_011":{"return_pct":-0.5089261770290978,"pnl_dollars":-1205626.9795466785,"is_winner":false},"setup_012":{"return_pct":-0.4005780747940665,"pnl_dollars":-174808.66846376326,"is_winner":false},"setup_013":{"return_pct":-0.3077100146533559,"pnl_dollars":-196793.6502276004,"is_winner":false},"setup_014":{"return_pct":-0.3329822418038105,"pnl_dollars":-741630.4691598408,"is_winner":false},"setup_015":{"return_pct":-0.5377407600962205,"pnl_dollars":-63837.43212913217,"is_winner":false},"setup_016":{"return_pct":-0.3305126136178445,"pnl_dollars":-127950.95671785198,"is_winner":false},"setup_017":{"return_pct":-0.2760878685114128,"pnl_dollars":-95983.03351094195,"is_winner":false},"setup_018":{"return_pct":-0.3597734667489978,"pnl_dollars":-28742.539818952107,"is_winner":false},"setup_019":{"return_pct":-0.3261448070757084,"pnl_dollars":-56943.37014786013,"is_winner":false},"setup_020":{"return_pct":-0.3487269166891554,"pnl_dollars":-286393.409849458,"is_winner":false},"setup_021":{"return_pct":-0.2728409743379451,"pnl_dollars":-50232.20651942547,"is_winner":false},"setup_022":{"return_pct":-0.3053849566668102,"pnl_dollars":-232201.0624793397,"is_winner":false},"setup_023":{"return_pct":-0.2829568038654251,"pnl_dollars":-12407.567330422778,"is_winner":false},"setup_024":{"return_pct":-0.3159765581319698,"pnl_dollars":-71361.71751653895,"is_winner":false},"setup_025":{"return_pct":-0.3611605101107226,"pnl_dollars":-220459.21359976425,"is_winner":false},"setup_026":{"return_pct":-0.161215096925144,"pnl_dollars":-28974.614235604797,"is_winner":false},"setup_027":{"return_pct":-0.2174465522630676,"pnl_dollars":-32788.37262815054,"is_winner":false},"setup_028":{"return_pct":-0.156228922576226,"pnl_dollars":-65276.90911399556,"is_winner":false},"setup_029":{"return_pct":-0.2000466197087998,"pnl_dollars":-401376.8515595186,"is_winner":false},"setup_030":{"return_pct":-0.2026782665979435,"pnl_dollars":-163780.4863200786,"is_winner":false},"setup_031":{"return_pct":-0.2467023838735891,"pnl_dollars":-460865.4930303991,"is_winner":false},"setup_032":{"return_pct":-0.1210116604125975,"pnl_dollars":-9662.527237778297,"is_winner":false},"setup_033":{"return_pct":-0.2469461207531192,"pnl_dollars":-158146.06692069635,"is_winner":false},"setup_034":{"return_pct":-0.2187341776422031,"pnl_dollars":-487952.7400779566,"is_winner":false},"setup_035":{"return_pct":-0.2051216709518017,"pnl_dollars":-31607.3559747041,"is_winner":false},"setup_036":{"return_pct":0.0360161024603259,"pnl_dollars":4930.899471387529,"is_winner":true},"setup_037":{"return_pct":-0.0682587323223798,"pnl_dollars":-15856.11231900938,"is_winner":false},"setup_038":{"return_pct":-0.1806678941125683,"pnl_dollars":-18050.660004094432,"is_winner":false},"setup_039":{"return_pct":-0.1116505186051118,"pnl_dollars":-48369.48734399601,"is_winner":false},"setup_040":{"return_pct":-0.1712465341502644,"pnl_dollars":-326482.69955694,"is_winner":false},"setup_041":{"return_pct":-0.2480452642484655,"pnl_dollars":-129987.83137147094,"is_winner":false},"setup_042":{"return_pct":-0.2396464378167218,"pnl_dollars":-107846.6860336939,"is_winner":false},"setup_043":{"return_pct":-0.2294729501409553,"pnl_dollars":-111835.23156572302,"is_winner":false},"setup_044":{"return_pct":-0.0336486152780504,"pnl_dollars":-19360.77587442205,"is_winner":false},"setup_045":{"return_pct":-0.1677729278528774,"pnl_dollars":-85504.38363036083,"is_winner":false},"setup_046":{"return_pct":-0.1811111766741411,"pnl_dollars":-14470.591573709942,"is_winner":false},"setup_047":{"return_pct":0.0098486131235425,"pnl_dollars":15337.588641288923,"is_winner":true},"setup_048":{"return_pct":-0.2041537636436605,"pnl_dollars":-81451.55331569712,"is_winner":false},"setup_049":{"return_pct":-0.226250210320331,"pnl_dollars":-79754.99293184862,"is_winner":false},"setup_050":{"return_pct":-0.1725972062889663,"pnl_dollars":-8379.652494629947,"is_winner":false},"setup_051":{"return_pct":-0.1525318338602158,"pnl_dollars":-88620.15834942338,"is_winner":false},"setup_052":{"return_pct":-0.1082387931966667,"pnl_dollars":-22555.4205395623,"is_winner":false},"setup_053":{"return_pct":-0.2196620515322939,"pnl_dollars":-111635.63406995992,"is_winner":false},"setup_054":{"return_pct":-0.1899166548958749,"pnl_dollars":-15128.045753316905,"is_winner":false},"setup_055":{"return_pct":-0.2299373284289974,"pnl_dollars":-81810.93092921277,"is_winner":false},"setup_056":{"return_pct":-0.2079590569537734,"pnl_dollars":-447420.2465551216,"is_winner":false},"setup_057":{"return_pct":-0.2188404936300017,"pnl_dollars":-23274.820128057865,"is_winner":false},"setup_058":{"return_pct":-0.1970888262426134,"pnl_dollars":-46076.21524432761,"is_winner":false},"setup_059":{"return_pct":-0.1561683846655828,"pnl_dollars":-398620.0406683106,"is_winner":false},"setup_060":{"return_pct":-0.1493978977234241,"pnl_dollars":-42683.50375573189,"is_winner":false},"setup_061":{"return_pct":-0.2299369873759153,"pnl_dollars":-501623.156225323,"is_winner":false},"setup_062":{"return_pct":-0.12769625818953,"pnl_dollars":-80708.9796530467,"is_winner":false},"setup_063":{"return_pct":-0.1940895615432405,"pnl_dollars":-131369.90970394004,"is_winner":false},"setup_064":{"return_pct":-0.1584020928526539,"pnl_dollars":-22533.88837634612,"is_winner":false},"setup_065":{"return_pct":-0.2364233734909057,"pnl_dollars":-137987.5250786795,"is_winner":false},"setup_066":{"return_pct":-0.2564991683303514,"pnl_dollars":-169716.8743624015,"is_winner":false},"setup_067":{"return_pct":-0.2222114880249218,"pnl_dollars":-19194.940476348944,"is_winner":false},"setup_068":{"return_pct":-0.2410932364871205,"pnl_dollars":-50404.08367156668,"is_winner":false},"setup_069":{"return_pct":-0.1492655644035549,"pnl_dollars":-18619.7989156744,"is_winner":false},"setup_070":{"return_pct":-0.1809692105941099,"pnl_dollars":-22792.681535907832,"is_winner":false},"setup_071":{"return_pct":-0.1950860186093843,"pnl_dollars":-204330.89929175127,"is_winner":false},"setup_072":{"return_pct":-0.2500212748157235,"pnl_dollars":-121287.634538237,"is_winner":false},"setup_073":{"return_pct":-0.1915432762639121,"pnl_dollars":-73250.47417077294,"is_winner":false},"setup_074":{"return_pct":-0.1200478340520301,"pnl_dollars":-37240.727914896444,"is_winner":false},"setup_075":{"return_pct":-0.2637151908503795,"pnl_dollars":-135567.4497908384,"is_winner":false},"setup_076":{"return_pct":2.8796631275282727,"pnl_dollars":2011058.919173668,"is_winner":true},"setup_077":{"return_pct":0.2008413473093606,"pnl_dollars":226447.59892495675,"is_winner":true},"setup_078":{"return_pct":1.118608949072727,"pnl_dollars":535573.1989068338,"is_winner":true},"setup_079":{"return_pct":6.019507897714175,"pnl_dollars":3069874.234072887,"is_winner":true},"setup_080":{"return_pct":2.402908557885344,"pnl_dollars":2986945.2188213984,"is_winner":true},"setup_081":{"return_pct":0.6879022599749364,"pnl_dollars":1531442.3459920231,"is_winner":true},"setup_082":{"return_pct":0.6943723659340901,"pnl_dollars":114537.27481339771,"is_winner":true},"setup_083":{"return_pct":2.6306411715035067,"pnl_dollars":1010709.9892152378,"is_winner":true},"setup_084":{"return_pct":0.2751054401843901,"pnl_dollars":121253.25216562935,"is_winner":true},"setup_085":{"return_pct":2.181521335719608,"pnl_dollars":466289.9887146612,"is_winner":true},"setup_086":{"return_pct":1.6747233093642218,"pnl_dollars":366839.1430101332,"is_winner":true},"setup_087":{"return_pct":0.0658134706065327,"pnl_dollars":13453.359559788718,"is_winner":true},"setup_088":{"return_pct":0.3044325962800288,"pnl_dollars":52810.23365350789,"is_winner":true},"setup_089":{"return_pct":0.5593362233876469,"pnl_dollars":358796.8297771901,"is_winner":true},"setup_090":{"return_pct":8.975461259375772,"pnl_dollars":415668.1581248997,"is_winner":true},"setup_091":{"return_pct":0.9986802174091288,"pnl_dollars":133447.12726353834,"is_winner":true},"setup_092":{"return_pct":1.2706230991110117,"pnl_dollars":64037.7722388849,"is_winner":true},"setup_093":{"return_pct":0.1468167476204827,"pnl_dollars":22185.161912462994,"is_winner":true},"setup_094":{"return_pct":0.8418638346178856,"pnl_dollars":187911.8944563633,"is_winner":true},"setup_095":{"return_pct":17.096424537835155,"pnl_dollars":1365453.1745786122,"is_winner":true},"setup_096":{"return_pct":0.2766810458152682,"pnl_dollars":22545.836354493644,"is_winner":true},"setup_097":{"return_pct":0.7053641225186801,"pnl_dollars":540848.3936338372,"is_winner":true},"setup_098":{"return_pct":0.7956384055482981,"pnl_dollars":291726.6838038867,"is_winner":true},"setup_099":{"return_pct":0.7823533574615311,"pnl_dollars":1776883.572838184,"is_winner":true},"setup_100":{"return_pct":3.460222736847564,"pnl_dollars":6742101.340675444,"is_winner":true}};
+const N_SETUPS = 100;
+const BASELINE_WR = 0.27;
+const BASELINE_TOTAL_PNL = 13540000;
+
+const state = {
+  currentIdx: 0,
+  ratings: {},
+  hypothesis: null,
+  results: null,
+  haOn: false,
+};
+
+function setupId(idx) {
+  return `setup_${(idx+1).toString().padStart(3, '0')}`;
+}
+
+function imgPath(setupId, timeframe, ha) {
+  const variant = ha ? 'ha' : 'regular';
+  return `pngs/${setupId}_${timeframe}_${variant}.png`;
+}
+
+function saveState() {
+  const data = JSON.stringify({
+    currentIdx: state.currentIdx,
+    ratings: state.ratings,
+    hypothesis: state.hypothesis,
+    haOn: state.haOn,
+    last_save: new Date().toISOString(),
+  });
+  // Write to TWO keys for redundancy
+  try { localStorage.setItem(STORAGE_KEY, data); } catch (e) { console.error('save failed', e); }
+  try { localStorage.setItem(STORAGE_KEY + '_backup', data); } catch (e) {}
+  
+  const el = document.getElementById('autosave-status');
+  if (el) {
+    el.textContent = '✓ saved';
+    setTimeout(() => { if (el) el.textContent = 'auto-saved'; }, 1500);
+  }
+  
+  // Auto-download backup every 10 ratings (silent prompt)
+  const ratedCount = Object.keys(state.ratings).filter(k => state.ratings[k].decision).length;
+  if (ratedCount > 0 && ratedCount % 10 === 0 && ratedCount !== state._lastAutoBackup) {
+    state._lastAutoBackup = ratedCount;
+    autoBackup(ratedCount);
+  }
+}
+
+function autoBackup(count) {
+  // Show a non-blocking notice — user can choose to download
+  const el = document.getElementById('autosave-status');
+  if (el) {
+    el.innerHTML = `🔔 ${count} done — <a href="javascript:downloadBackup()" style="color:#58a6ff; text-decoration: underline;">tap to backup</a>`;
+    // Don't auto-clear this one — user should see it
+  }
+}
+
+function loadState() {
+  let raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) raw = localStorage.getItem(STORAGE_KEY + '_backup');
+  if (!raw) return false;
+  try {
+    const saved = JSON.parse(raw);
+    state.currentIdx = saved.currentIdx || 0;
+    state.ratings = saved.ratings || {};
+    state.hypothesis = saved.hypothesis || null;
+    state.haOn = saved.haOn || false;
+    return true;
+  } catch (e) { return false; }
+}
+
+function startRating() {
+  state.hypothesis = {
+    expected_skip_pct: document.getElementById('hyp-skip-pct').value.trim(),
+    expected_skip_direction: document.getElementById('hyp-skip-direction').value,
+    patterns_to_skip: document.getElementById('hyp-patterns').value.trim(),
+    other: document.getElementById('hyp-other').value.trim(),
+    committed_at: new Date().toISOString(),
+  };
+  saveState();
+  document.getElementById('welcome').classList.add('hidden');
+  document.getElementById('rater').classList.remove('hidden');
+  state.currentIdx = 0;
+  renderSetup();
+}
+
+function resumeRating() {
+  if (!loadState()) {
+    alert('No saved progress found.');
+    return;
+  }
+  document.getElementById('welcome').classList.add('hidden');
+  if (Object.keys(state.ratings).length >= N_SETUPS) {
+    document.getElementById('completion').classList.remove('hidden');
+  } else {
+    document.getElementById('rater').classList.remove('hidden');
+    renderSetup();
+  }
+}
+
+function setDecision(d) {
+  const sid = setupId(state.currentIdx);
+  if (!state.ratings[sid]) state.ratings[sid] = {};
+  state.ratings[sid].decision = d;
+  document.getElementById('btn-execute').classList.toggle('active', d === 'execute');
+  document.getElementById('btn-skip').classList.toggle('active', d === 'skip');
+  updateNextButton();
+  saveState();
+}
+
+function setConfidence(c) {
+  const sid = setupId(state.currentIdx);
+  if (!state.ratings[sid]) state.ratings[sid] = {};
+  state.ratings[sid].confidence = c;
+  document.querySelectorAll('.conf-btn').forEach((btn, i) => 
+    btn.classList.toggle('active', i + 1 === c));
+  updateNextButton();
+  saveState();
+}
+
+document.addEventListener('input', (e) => {
+  if (e.target.id === 'notes-input') {
+    const sid = setupId(state.currentIdx);
+    if (!state.ratings[sid]) state.ratings[sid] = {};
+    state.ratings[sid].notes = e.target.value;
+    state.ratings[sid].timestamp = new Date().toISOString();
+    saveState();
+  }
+});
+
+function updateNextButton() {
+  const sid = setupId(state.currentIdx);
+  const r = state.ratings[sid] || {};
+  document.getElementById('btn-next').disabled = !(r.decision && r.confidence);
+}
+
+function nextSetup() {
+  if (state.currentIdx < N_SETUPS - 1) {
+    state.currentIdx++;
+    saveState();
+    renderSetup();
+    window.scrollTo(0, 0);
+  } else {
+    saveState();
+    document.getElementById('rater').classList.add('hidden');
+    document.getElementById('completion').classList.remove('hidden');
+  }
+}
+
+function prevSetup() {
+  if (state.currentIdx > 0) {
+    state.currentIdx--;
+    saveState();
+    renderSetup();
+    window.scrollTo(0, 0);
+  }
+}
+
+function toggleHA() {
+  state.haOn = !state.haOn;
+  document.getElementById('ha-toggle').classList.toggle('active', state.haOn);
+  document.getElementById('ha-toggle').textContent = `Heikin Ashi: ${state.haOn ? 'ON' : 'OFF'}`;
+  saveState();
+  loadImages();
+}
+
+function loadImages() {
+  const sid = setupId(state.currentIdx);
+  const dailyImg = document.getElementById('img-daily');
+  const weeklyImg = document.getElementById('img-weekly');
+  
+  dailyImg.classList.add('loading');
+  weeklyImg.classList.add('loading');
+  
+  dailyImg.onload = () => dailyImg.classList.remove('loading');
+  weeklyImg.onload = () => weeklyImg.classList.remove('loading');
+  
+  dailyImg.src = imgPath(sid, 'daily', state.haOn);
+  weeklyImg.src = imgPath(sid, 'weekly', state.haOn);
+}
+
+function renderSetup() {
+  const sid = setupId(state.currentIdx);
+  document.getElementById('setup-num').textContent = state.currentIdx + 1;
+  document.getElementById('setup-id-display').textContent = sid;
+  document.getElementById('progress-fill').style.width =
+    ((state.currentIdx + 1) / N_SETUPS * 100) + '%';
+  
+  document.getElementById('ha-toggle').classList.toggle('active', state.haOn);
+  document.getElementById('ha-toggle').textContent = `Heikin Ashi: ${state.haOn ? 'ON' : 'OFF'}`;
+  
+  loadImages();
+  
+  const r = state.ratings[sid] || {};
+  document.getElementById('btn-execute').classList.toggle('active', r.decision === 'execute');
+  document.getElementById('btn-skip').classList.toggle('active', r.decision === 'skip');
+  document.querySelectorAll('.conf-btn').forEach((btn, i) =>
+    btn.classList.toggle('active', i + 1 === r.confidence));
+  document.getElementById('notes-input').value = r.notes || '';
+  
+  updateNextButton();
+}
+
+function revealResults() {
+  const results = computeResults();
+  state.results = results;
+  saveState();
+  document.getElementById('completion').classList.add('hidden');
+  document.getElementById('results').classList.remove('hidden');
+  renderResults(results);
+  window.scrollTo(0, 0);
+}
+
+function computeResults() {
+  let exec = [], skip = [];
+  for (let i = 0; i < N_SETUPS; i++) {
+    const sid = setupId(i);
+    const r = state.ratings[sid];
+    if (!r || !r.decision) continue;
+    const o = OUTCOMES[sid];
+    const record = { setup_id: sid, ...r, outcome: o };
+    if (r.decision === 'execute') exec.push(record);
+    else skip.push(record);
+  }
+  
+  function statsOf(records) {
+    if (records.length === 0) return { n: 0, wr: 0, mean_return: 0, total_pnl: 0 };
+    const winners = records.filter(r => r.outcome.is_winner).length;
+    const meanRet = records.reduce((a, r) => a + r.outcome.return_pct, 0) / records.length;
+    const totalPnl = records.reduce((a, r) => a + r.outcome.pnl_dollars, 0);
+    return { n: records.length, wr: winners / records.length, mean_return: meanRet, total_pnl: totalPnl };
+  }
+  
+  const byConf = {};
+  for (let c = 1; c <= 5; c++) {
+    const matches = [...exec, ...skip].filter(r => r.confidence === c);
+    if (matches.length === 0) continue;
+    const correct = matches.filter(r =>
+      (r.decision === 'execute' && r.outcome.is_winner) ||
+      (r.decision === 'skip' && !r.outcome.is_winner)
+    ).length;
+    byConf[c] = { n: matches.length, pct_correct: correct / matches.length };
+  }
+  
+  // Quartile breakdown
+  const allRated = [];
+  for (let i = 0; i < N_SETUPS; i++) {
+    const sid = setupId(i);
+    const r = state.ratings[sid];
+    if (!r || !r.decision) continue;
+    allRated.push({ ...r, outcome: OUTCOMES[sid] });
+  }
+  const sorted = [...allRated].sort((a, b) => a.outcome.return_pct - b.outcome.return_pct);
+  const q1 = sorted.slice(0, Math.floor(sorted.length * 0.25));
+  const q4 = sorted.slice(Math.floor(sorted.length * 0.75));
+  const q2 = sorted.slice(Math.floor(sorted.length * 0.25), Math.floor(sorted.length * 0.5));
+  const q3 = sorted.slice(Math.floor(sorted.length * 0.5), Math.floor(sorted.length * 0.75));
+  
+  const qStats = (arr) => {
+    if (!arr.length) return { n: 0, executed: 0, execute_rate: 0 };
+    const e = arr.filter(r => r.decision === 'execute').length;
+    return { n: arr.length, executed: e, execute_rate: e / arr.length };
+  };
+  
+  return {
+    exec_stats: statsOf(exec),
+    skip_stats: statsOf(skip),
+    byConfidence: byConf,
+    byQuartile: {
+      q1_bottom: qStats(q1),
+      q2: qStats(q2),
+      q3: qStats(q3),
+      q4_top: qStats(q4),
+    },
+  };
+}
+
+function renderResults(r) {
+  const execWr = r.exec_stats.wr;
+  const skipWr = r.skip_stats.wr;
+  
+  const verdict = (() => {
+    if (r.exec_stats.n === 0) return "You skipped everything — no execute set to score.";
+    if (r.skip_stats.n === 0) return "You executed every setup — same as baseline.";
+    const execEdge = execWr - BASELINE_WR;
+    if (Math.abs(execEdge) < 0.02) return "Discretion is essentially neutral — execute-set WR matches baseline. Trust the mechanical signal.";
+    if (execEdge > 0.05) return "Discretion ADDS VALUE — execute-set WR meaningfully beats baseline. You're identifying patterns the mechanical signal misses.";
+    if (execEdge < -0.05) return "Discretion HURTS — execute-set WR underperforms baseline. The mechanical system is smarter on this strategy.";
+    return "Discretion adds modest value, within noise margin.";
+  })();
+  
+  document.getElementById('headline-summary').textContent = verdict;
+  
+  const grid = document.getElementById('stat-grid');
+  grid.innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">Baseline (all 100)</div>
+      <div class="stat-value">${(BASELINE_WR*100).toFixed(1)}% WR</div>
+      <div style="font-size: 12px; color: #8b949e; margin-top: 4px;">
+        $${(BASELINE_TOTAL_PNL/1e6).toFixed(2)}M total P&L
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Your Execute Set (n=${r.exec_stats.n})</div>
+      <div class="stat-value ${execWr >= BASELINE_WR ? 'positive' : 'negative'}">${(execWr*100).toFixed(1)}% WR</div>
+      <div style="font-size: 12px; color: #8b949e; margin-top: 4px;">
+        $${(r.exec_stats.total_pnl/1e6).toFixed(2)}M total<br>
+        ${(r.exec_stats.mean_return*100).toFixed(0)}% mean return<br>
+        Edge: ${((execWr - BASELINE_WR)*100).toFixed(1)}pp
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Your Skip Set (n=${r.skip_stats.n})</div>
+      <div class="stat-value ${skipWr <= BASELINE_WR ? 'positive' : 'negative'}">${(skipWr*100).toFixed(1)}% WR</div>
+      <div style="font-size: 12px; color: #8b949e; margin-top: 4px;">
+        $${(r.skip_stats.total_pnl/1e6).toFixed(2)}M (missed)<br>
+        ${(r.skip_stats.mean_return*100).toFixed(0)}% mean return<br>
+        Lower WR = correctly avoided losers
+      </div>
+    </div>
+  `;
+  
+  let confHTML = '<table><thead><tr><th>Confidence</th><th>n</th><th>% correct</th></tr></thead><tbody>';
+  for (let c = 5; c >= 1; c--) {
+    if (!r.byConfidence[c]) continue;
+    const x = r.byConfidence[c];
+    confHTML += `<tr><td>${c}</td><td>${x.n}</td><td>${(x.pct_correct*100).toFixed(0)}%</td></tr>`;
+  }
+  confHTML += '</tbody></table><p style="font-size: 11px; color: #8b949e; margin-top: 8px;">"Correct" = executed a winner OR skipped a loser.</p>';
+  document.getElementById('confidence-table').innerHTML = confHTML;
+  
+  let qHTML = '<table><thead><tr><th>Quartile</th><th>n</th><th>% executed</th></tr></thead><tbody>';
+  const qLabels = {
+    q4_top: 'Top quartile (best winners)',
+    q3: 'Q3 (modest)',
+    q2: 'Q2 (mid losses)',
+    q1_bottom: 'Bottom quartile (worst losers)',
+  };
+  for (const [k, label] of Object.entries(qLabels)) {
+    const x = r.byQuartile[k];
+    if (!x || x.n === 0) continue;
+    qHTML += `<tr><td>${label}</td><td>${x.n}</td><td>${(x.execute_rate*100).toFixed(0)}%</td></tr>`;
+  }
+  qHTML += '</tbody></table>';
+  document.getElementById('quartile-table').innerHTML = qHTML;
+  
+  let hypHTML = '<table><thead><tr><th>Pre-commit</th><th>Reality</th></tr></thead><tbody>';
+  if (state.hypothesis) {
+    const totalRated = r.exec_stats.n + r.skip_stats.n;
+    const skipPct = totalRated > 0 ? (r.skip_stats.n / totalRated * 100).toFixed(0) + '%' : '—';
+    const dirActual = skipWr < BASELINE_WR ? 'lower (correct avoidance)' :
+                      skipWr > BASELINE_WR ? 'higher (skipped winners)' : 'same';
+    hypHTML += `<tr><td>Expected skip: <strong>${state.hypothesis.expected_skip_pct || '—'}</strong></td><td>Actual: <strong>${skipPct}</strong></td></tr>`;
+    hypHTML += `<tr><td>Expected direction: <strong>${state.hypothesis.expected_skip_direction || '—'}</strong></td><td>Actual: <strong>${dirActual}</strong></td></tr>`;
+    if (state.hypothesis.patterns_to_skip) {
+      hypHTML += `<tr><td colspan="2" style="font-size: 12px; color: #8b949e;">Patterns: "${state.hypothesis.patterns_to_skip}"</td></tr>`;
+    }
+    if (state.hypothesis.other) {
+      hypHTML += `<tr><td colspan="2" style="font-size: 12px; color: #8b949e;">Other: "${state.hypothesis.other}"</td></tr>`;
+    }
+  }
+  hypHTML += '</tbody></table>';
+  document.getElementById('hypothesis-comparison').innerHTML = hypHTML;
+}
+
+function downloadRatings() {
+  const data = {
+    hypothesis: state.hypothesis,
+    ratings: state.ratings,
+    results: state.results,
+    completed_at: new Date().toISOString(),
+    n_rated: Object.keys(state.ratings).length,
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'v18_blind_ratings_' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadBackup() {
+  const ratedCount = Object.keys(state.ratings).filter(k => state.ratings[k].decision).length;
+  const data = {
+    hypothesis: state.hypothesis,
+    ratings: state.ratings,
+    currentIdx: state.currentIdx,
+    haOn: state.haOn,
+    saved_at: new Date().toISOString(),
+    n_rated: ratedCount,
+    is_backup: true,
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const dateStr = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+  a.download = `v18_backup_${ratedCount}rated_${dateStr}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  
+  const el = document.getElementById('autosave-status');
+  if (el) {
+    el.textContent = '💾 backup downloaded';
+    setTimeout(() => { if (el) el.textContent = 'auto-saved'; }, 2500);
+  }
+}
+
+function importBackup(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!imported.ratings) {
+        alert('This file does not look like a valid backup.');
+        return;
+      }
+      const ratedCount = Object.keys(imported.ratings).filter(k => imported.ratings[k].decision).length;
+      const ok = confirm(`Import backup with ${ratedCount} rated setups? This will overwrite any current progress.`);
+      if (!ok) return;
+      
+      state.ratings = imported.ratings;
+      state.hypothesis = imported.hypothesis || null;
+      state.currentIdx = imported.currentIdx || 0;
+      state.haOn = imported.haOn || false;
+      saveState();
+      
+      alert(`Imported ${ratedCount} ratings. Click "Resume saved progress" to continue.`);
+      // Stay on welcome screen so user can tap Resume
+    } catch (err) {
+      alert('Failed to read backup: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  // Reset input so re-uploading the same file works
+  event.target.value = '';
+}
+
+function showProgressCheck() {
+  // Compute current results based on what's been rated so far
+  const results = computeResultsPartial();
+  if (results.exec_stats.n + results.skip_stats.n === 0) {
+    alert('No ratings yet — rate at least a few setups before checking progress.');
+    return;
+  }
+  
+  const execWr = results.exec_stats.wr;
+  const skipWr = results.skip_stats.wr;
+  const totalRated = results.exec_stats.n + results.skip_stats.n;
+  
+  let html = `<p><strong>${totalRated} of 100 setups rated.</strong></p>`;
+  html += `<p style="color: #8b949e; font-size: 13px;">Stats below reflect ONLY the setups you've rated so far. Final results may differ.</p>`;
+  html += `<div class="stat-grid">`;
+  html += `<div class="stat-card">
+    <div class="stat-label">Sample baseline (your ${totalRated} rated)</div>
+    <div class="stat-value">${(results.sampleBaselineWr*100).toFixed(1)}% WR</div>
+    <div style="font-size: 12px; color: #8b949e; margin-top: 4px;">$${(results.sampleBaselineTotalPnl/1e6).toFixed(2)}M total in sample</div>
+  </div>`;
+  html += `<div class="stat-card">
+    <div class="stat-label">Your Execute Set (n=${results.exec_stats.n})</div>
+    <div class="stat-value ${execWr >= results.sampleBaselineWr ? 'positive' : 'negative'}">${(execWr*100).toFixed(1)}% WR</div>
+    <div style="font-size: 12px; color: #8b949e; margin-top: 4px;">
+      $${(results.exec_stats.total_pnl/1e6).toFixed(2)}M total<br>
+      Edge vs sample baseline: ${((execWr - results.sampleBaselineWr)*100).toFixed(1)}pp
+    </div>
+  </div>`;
+  html += `<div class="stat-card">
+    <div class="stat-label">Your Skip Set (n=${results.skip_stats.n})</div>
+    <div class="stat-value ${skipWr <= results.sampleBaselineWr ? 'positive' : 'negative'}">${(skipWr*100).toFixed(1)}% WR</div>
+    <div style="font-size: 12px; color: #8b949e; margin-top: 4px;">
+      $${(results.skip_stats.total_pnl/1e6).toFixed(2)}M (would have missed)<br>
+      Lower WR = correctly avoided losers
+    </div>
+  </div>`;
+  html += `</div>`;
+  
+  // Verdict-so-far
+  const execEdge = execWr - results.sampleBaselineWr;
+  let verdict = '';
+  if (Math.abs(execEdge) < 0.03) {
+    verdict = 'So far: roughly neutral — your execute-set WR matches the sample baseline.';
+  } else if (execEdge > 0.05) {
+    verdict = 'So far: ADDING VALUE — your execute set outperforms baseline. (Caveat: small samples are noisy.)';
+  } else if (execEdge < -0.05) {
+    verdict = 'So far: UNDERPERFORMING — your execute set has lower WR than baseline. (Caveat: small samples.)';
+  } else {
+    verdict = 'So far: marginal edge, within noise.';
+  }
+  html += `<p style="margin-top: 16px; font-weight: 500;">${verdict}</p>`;
+  html += `<p style="font-size: 12px; color: #8b949e; margin-top: 12px;">⚠️ At n<50, results are largely variance. Don't over-correct based on this.</p>`;
+  
+  document.getElementById('progress-stats').innerHTML = html;
+  document.getElementById('rater').classList.add('hidden');
+  document.getElementById('progress-check').classList.remove('hidden');
+}
+
+function computeResultsPartial() {
+  let exec = [], skip = [];
+  let sampleBaselineWinners = 0;
+  let sampleBaselineTotalPnl = 0;
+  let sampleN = 0;
+  
+  for (let i = 0; i < N_SETUPS; i++) {
+    const sid = setupId(i);
+    const r = state.ratings[sid];
+    if (!r || !r.decision) continue;
+    const o = OUTCOMES[sid];
+    if (!o) continue;
+    sampleN++;
+    if (o.is_winner) sampleBaselineWinners++;
+    sampleBaselineTotalPnl += o.pnl_dollars;
+    
+    const record = { setup_id: sid, ...r, outcome: o };
+    if (r.decision === 'execute') exec.push(record);
+    else skip.push(record);
+  }
+  
+  function statsOf(records) {
+    if (records.length === 0) return { n: 0, wr: 0, mean_return: 0, total_pnl: 0 };
+    const winners = records.filter(r => r.outcome.is_winner).length;
+    const meanRet = records.reduce((a, r) => a + r.outcome.return_pct, 0) / records.length;
+    const totalPnl = records.reduce((a, r) => a + r.outcome.pnl_dollars, 0);
+    return { n: records.length, wr: winners / records.length, mean_return: meanRet, total_pnl: totalPnl };
+  }
+  
+  return {
+    exec_stats: statsOf(exec),
+    skip_stats: statsOf(skip),
+    sampleBaselineWr: sampleN > 0 ? sampleBaselineWinners / sampleN : 0,
+    sampleBaselineTotalPnl: sampleBaselineTotalPnl,
+    sampleN: sampleN,
+  };
+}
+
+window.addEventListener('orientationchange', () => {
+  setTimeout(() => {
+    if (!document.getElementById('rater').classList.contains('hidden')) {
+      renderSetup();
+    }
+  }, 200);
+});
+</script>
+</body>
+</html>
